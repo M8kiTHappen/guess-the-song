@@ -9,9 +9,9 @@ const supabase = createClient(
 )
 
 const GENRES = [
-  { label: 'rap',  itunesGenreId: 18,  searchTerms: ['hip hop', 'rap', 'trap', 'drill'] },
-  { label: 'pop',  itunesGenreId: 14,  searchTerms: ['pop', 'dance pop', 'teen pop'] },
-  { label: 'rnb',  itunesGenreId: 15,  searchTerms: ['r&b', 'soul', 'neo soul', 'contemporary r&b'] },
+  { label: 'rap', itunesGenreId: 18, searchTerms: ['hip hop', 'rap'] },
+  { label: 'pop', itunesGenreId: 14, searchTerms: ['pop', 'dance pop'] },
+  { label: 'rnb', itunesGenreId: 15, searchTerms: ['r&b', 'soul', 'neo soul'] },
 ]
 
 const DECADES = [
@@ -21,21 +21,34 @@ const DECADES = [
   { label: '2020s', start: 2020, end: 2029 },
 ]
 
+const TARGET_PER_COMBO = 200
+const MIN_DURATION_MS  = 90_000  // filter out short clips / beat packs
+
+// Blocks CJK, Korean, Japanese, Arabic, and other non-Latin scripts
 function isLatinScript(text: string): boolean {
   return !/[ᄀ-ᇿ぀-ヿ㐀-鿿가-퟿؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.test(text)
 }
 
-const TARGET_PER_COMBO = 500
+// Blocks instrumental beats and sound packs commonly mislabelled as songs
+const BLOCKED_PHRASES = [
+  'type beat', 'type-beat', 'instrumental', 'beat tape', 'free beat',
+  'hip hop beat', 'rap beat', 'trap beat', 'drill beat', 'boom bap',
+  'sound kit', 'sample pack', 'loop kit',
+]
+
+function isRealSong(title: string): boolean {
+  const lower = title.toLowerCase()
+  return !BLOCKED_PHRASES.some(p => lower.includes(p))
+}
 
 interface ItunesTrack {
-  trackId: number
-  trackName: string
-  artistName: string
-  collectionName: string
-  artworkUrl100: string
-  previewUrl: string
-  primaryGenreName: string
-  releaseDate: string
+  trackId:         number
+  trackName:       string
+  artistName:      string
+  collectionName:  string
+  artworkUrl100:   string
+  previewUrl:      string
+  releaseDate:     string
   trackTimeMillis: number
 }
 
@@ -53,44 +66,58 @@ async function fetchItunesTracks(
     country: 'US',
     lang:    'en_us',
   })
-
-  const res = await fetch(`https://itunes.apple.com/search?${params}`)
+  const res  = await fetch(`https://itunes.apple.com/search?${params}`)
   const data = await res.json()
   return data.results ?? []
 }
 
 async function populate() {
+  // Clear existing songs for a clean re-population
+  console.log('Clearing existing songs...')
+  const { error: clearError } = await supabase
+    .from('songs')
+    .delete()
+    .not('id', 'is', null)
+
+  if (clearError) {
+    console.error('Failed to clear songs:', clearError.message)
+    process.exit(1)
+  }
+  console.log('Cleared.')
+
   for (const genre of GENRES) {
     for (const decade of DECADES) {
       console.log(`\nFetching ${genre.label} / ${decade.label}...`)
 
-      const seen = new Set<number>()
+      const seen      = new Set<number>()
       const allTracks: ItunesTrack[] = []
 
       for (const term of genre.searchTerms) {
         const tracks = await fetchItunesTracks(term, genre.itunesGenreId)
 
         for (const track of tracks) {
-          if (seen.has(track.trackId)) continue
-          if (!track.previewUrl) continue
-          if (!track.releaseDate) continue
-          if (!isLatinScript(track.trackName) || !isLatinScript(track.artistName)) continue
+          if (seen.has(track.trackId))                                   continue
+          if (!track.previewUrl)                                         continue
+          if (!track.releaseDate)                                        continue
+          if ((track.trackTimeMillis ?? 0) < MIN_DURATION_MS)           continue
+          if (!isLatinScript(track.trackName))                           continue
+          if (!isLatinScript(track.artistName))                         continue
+          if (!isRealSong(track.trackName))                              continue
 
           const year = new Date(track.releaseDate).getFullYear()
-          if (year < decade.start || year > decade.end) continue
+          if (year < decade.start || year > decade.end)                  continue
 
           seen.add(track.trackId)
           allTracks.push(track)
         }
 
-        // Respect iTunes rate limits
         await new Promise(r => setTimeout(r, 300))
       }
 
-      console.log(`  ${allTracks.length} songs found with preview URLs`)
+      console.log(`  ${allTracks.length} qualifying songs found`)
 
       const rows = allTracks.slice(0, TARGET_PER_COMBO).map(t => ({
-        spotify_id:   String(t.trackId),   // reusing column for iTunes track ID
+        spotify_id:   String(t.trackId),
         title:        t.trackName,
         artist:       t.artistName,
         album:        t.collectionName,
@@ -114,7 +141,7 @@ async function populate() {
       if (error) {
         console.error(`  Error inserting ${genre.label}/${decade.label}:`, error.message)
       } else {
-        console.log(`  Inserted/updated ${rows.length} songs`)
+        console.log(`  Inserted ${rows.length} songs`)
       }
     }
   }

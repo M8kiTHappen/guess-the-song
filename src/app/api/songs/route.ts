@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Blocks CJK, Korean, Japanese, Arabic, and other non-Latin scripts
 function isLatinScript(text: string): boolean {
   return !/[ᄀ-ᇿ぀-ヿ㐀-鿿가-퟿؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.test(text)
+}
+
+const BLOCKED_PHRASES = [
+  'type beat', 'type-beat', 'instrumental', 'beat tape', 'free beat',
+  'hip hop beat', 'rap beat', 'trap beat', 'drill beat', 'boom bap',
+  'sound kit', 'sample pack', 'loop kit',
+]
+
+function isRealSong(title: string): boolean {
+  const lower = title.toLowerCase()
+  return !BLOCKED_PHRASES.some(p => lower.includes(p))
 }
 
 export async function GET(request: NextRequest) {
@@ -33,7 +43,7 @@ export async function GET(request: NextRequest) {
   }
 
   const available = (data ?? [])
-    .filter(s => !exclude.includes(s.id) && isLatinScript(s.title) && isLatinScript(s.artist))
+    .filter(s => !exclude.includes(s.id) && isLatinScript(s.title) && isLatinScript(s.artist) && isRealSong(s.title))
     .sort(() => Math.random() - 0.5)
     .slice(0, count)
 
