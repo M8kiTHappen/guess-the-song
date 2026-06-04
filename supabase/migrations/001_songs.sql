@@ -1,6 +1,6 @@
 CREATE TABLE songs (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  spotify_id   VARCHAR(255) UNIQUE NOT NULL,
+  spotify_id   VARCHAR(255) UNIQUE NOT NULL,  -- stores iTunes trackId
   title        VARCHAR(255) NOT NULL,
   artist       VARCHAR(255) NOT NULL,
   album        VARCHAR(255),
