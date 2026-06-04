@@ -6,12 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "populate": "tsx scripts/populate.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
+    "dotenv": "^17.4.2",
     "next": "16.2.7",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "tsx": "^4.22.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
