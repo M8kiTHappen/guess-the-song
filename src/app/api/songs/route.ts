@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Blocks CJK, Korean, Japanese, Arabic, and other non-Latin scripts
+function isLatinScript(text: string): boolean {
+  return !/[ᄀ-ᇿ぀-ヿ㐀-鿿가-퟿؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.test(text)
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const genre   = searchParams.get('genre')
@@ -28,7 +33,7 @@ export async function GET(request: NextRequest) {
   }
 
   const available = (data ?? [])
-    .filter(s => !exclude.includes(s.id))
+    .filter(s => !exclude.includes(s.id) && isLatinScript(s.title) && isLatinScript(s.artist))
     .sort(() => Math.random() - 0.5)
     .slice(0, count)
 

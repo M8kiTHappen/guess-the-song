@@ -10,7 +10,8 @@ export default function RevealScreen() {
 
   const [visible, setVisible] = useState(false)
 
-  const currentSong = songs[currentSongIndex]
+  // Freeze the song at mount — prevents flashing the next song during the exit animation
+  const [currentSong] = useState(() => songs[currentSongIndex])
 
   // Brief blackout then reveal
   useEffect(() => {

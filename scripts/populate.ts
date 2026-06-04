@@ -21,6 +21,10 @@ const DECADES = [
   { label: '2020s', start: 2020, end: 2029 },
 ]
 
+function isLatinScript(text: string): boolean {
+  return !/[ᄀ-ᇿ぀-ヿ㐀-鿿가-퟿؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.test(text)
+}
+
 const TARGET_PER_COMBO = 500
 
 interface ItunesTrack {
@@ -70,6 +74,7 @@ async function populate() {
           if (seen.has(track.trackId)) continue
           if (!track.previewUrl) continue
           if (!track.releaseDate) continue
+          if (!isLatinScript(track.trackName) || !isLatinScript(track.artistName)) continue
 
           const year = new Date(track.releaseDate).getFullYear()
           if (year < decade.start || year > decade.end) continue
