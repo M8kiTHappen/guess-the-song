@@ -8,10 +8,81 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const GENRES = [
-  { label: 'rap', itunesGenreId: 18, searchTerms: ['hip hop', 'rap'] },
-  { label: 'pop', itunesGenreId: 14, searchTerms: ['pop', 'dance pop'] },
-  { label: 'rnb', itunesGenreId: 15, searchTerms: ['r&b', 'soul', 'neo soul'] },
+// ─── Artist roster ────────────────────────────────────────────────────────────
+// genre is the bucket the artist's songs go into regardless of release decade.
+// Decade is assigned automatically from each song's release year.
+
+const ARTISTS: { name: string; genre: 'rap' | 'pop' | 'rnb' }[] = [
+  // Rap / Hip-Hop
+  { name: '2Pac',                genre: 'rap' },
+  { name: 'The Notorious B.I.G.', genre: 'rap' },
+  { name: 'Jay-Z',               genre: 'rap' },
+  { name: 'Eminem',              genre: 'rap' },
+  { name: 'Kanye West',          genre: 'rap' },
+  { name: 'Lil Wayne',           genre: 'rap' },
+  { name: 'Snoop Dogg',          genre: 'rap' },
+  { name: '50 Cent',             genre: 'rap' },
+  { name: 'Nicki Minaj',         genre: 'rap' },
+  { name: 'Cardi B',             genre: 'rap' },
+  { name: 'Lil Baby',            genre: 'rap' },
+  { name: '21 Savage',           genre: 'rap' },
+  { name: 'Wiz Khalifa',         genre: 'rap' },
+  { name: 'Rick Ross',           genre: 'rap' },
+  { name: 'Post Malone',         genre: 'rap' },
+  { name: 'Drake',               genre: 'rap' },
+  { name: 'J. Cole',             genre: 'rap' },
+  { name: 'Kendrick Lamar',      genre: 'rap' },
+  { name: 'Lil Uzi Vert',        genre: 'rap' },
+  { name: 'Travis Scott',        genre: 'rap' },
+  { name: 'Gunna',               genre: 'rap' },
+  { name: 'Young Thug',          genre: 'rap' },
+  { name: 'NBA YoungBoy',        genre: 'rap' },
+  { name: 'Future',              genre: 'rap' },
+  { name: 'Migos',               genre: 'rap' },
+
+  // Pop
+  { name: 'Taylor Swift',        genre: 'pop' },
+  { name: 'Ariana Grande',       genre: 'pop' },
+  { name: 'Ed Sheeran',          genre: 'pop' },
+  { name: 'Justin Bieber',       genre: 'pop' },
+  { name: 'Rihanna',             genre: 'pop' },
+  { name: 'Beyoncé',             genre: 'pop' },
+  { name: 'Katy Perry',          genre: 'pop' },
+  { name: 'Lady Gaga',           genre: 'pop' },
+  { name: 'Britney Spears',      genre: 'pop' },
+  { name: 'Justin Timberlake',   genre: 'pop' },
+  { name: 'Adele',               genre: 'pop' },
+  { name: 'Mariah Carey',        genre: 'pop' },
+  { name: 'Bruno Mars',          genre: 'pop' },
+  { name: 'Olivia Rodrigo',      genre: 'pop' },
+  { name: 'Dua Lipa',            genre: 'pop' },
+  { name: 'Billie Eilish',       genre: 'pop' },
+  { name: 'Selena Gomez',        genre: 'pop' },
+  { name: 'Christina Aguilera',  genre: 'pop' },
+  { name: 'Backstreet Boys',     genre: 'pop' },
+  { name: 'Pink',                genre: 'pop' },
+
+  // R&B
+  { name: 'The Weeknd',          genre: 'rnb' },
+  { name: 'SZA',                 genre: 'rnb' },
+  { name: 'Usher',               genre: 'rnb' },
+  { name: 'Alicia Keys',         genre: 'rnb' },
+  { name: 'Mary J. Blige',       genre: 'rnb' },
+  { name: 'John Legend',         genre: 'rnb' },
+  { name: 'Aaliyah',             genre: 'rnb' },
+  { name: 'TLC',                 genre: 'rnb' },
+  { name: 'Whitney Houston',     genre: 'rnb' },
+  { name: 'Janet Jackson',       genre: 'rnb' },
+  { name: 'H.E.R.',              genre: 'rnb' },
+  { name: 'Chris Brown',         genre: 'rnb' },
+  { name: 'Ne-Yo',               genre: 'rnb' },
+  { name: 'Boyz II Men',         genre: 'rnb' },
+  { name: 'Bryson Tiller',       genre: 'rnb' },
+  { name: 'Summer Walker',       genre: 'rnb' },
+  { name: 'Miguel',              genre: 'rnb' },
+  { name: 'Jhené Aiko',          genre: 'rnb' },
+  { name: 'Ciara',               genre: 'rnb' },
+  { name: 'Missy Elliott',       genre: 'rnb' },
 ]
 
 const DECADES = [
@@ -21,15 +92,12 @@ const DECADES = [
   { label: '2020s', start: 2020, end: 2029 },
 ]
 
-const TARGET_PER_COMBO = 200
-const MIN_DURATION_MS  = 90_000  // filter out short clips / beat packs
+const MIN_DURATION_MS = 90_000
 
-// Blocks CJK, Korean, Japanese, Arabic, and other non-Latin scripts
 function isLatinScript(text: string): boolean {
   return !/[ᄀ-ᇿ぀-ヿ㐀-鿿가-퟿؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/.test(text)
 }
 
-// Blocks instrumental beats and sound packs commonly mislabelled as songs
 const BLOCKED_PHRASES = [
   'type beat', 'type-beat', 'instrumental', 'beat tape', 'free beat',
   'hip hop beat', 'rap beat', 'trap beat', 'drill beat', 'boom bap',
@@ -41,38 +109,58 @@ function isRealSong(title: string): boolean {
   return !BLOCKED_PHRASES.some(p => lower.includes(p))
 }
 
+function decadeFor(year: number): string | null {
+  const decade = DECADES.find(d => year >= d.start && year <= d.end)
+  return decade?.label ?? null
+}
+
 interface ItunesTrack {
   trackId:         number
   trackName:       string
   artistName:      string
   collectionName:  string
   artworkUrl100:   string
-  previewUrl:      string
+  previewUrl:      string | null
   releaseDate:     string
   trackTimeMillis: number
+  wrapperType:     string
+  kind:            string
 }
 
-async function fetchItunesTracks(
-  searchTerm: string,
-  genreId: number,
-  limit = 200
-): Promise<ItunesTrack[]> {
+function trunc(s: string, max = 250): string {
+  return s?.length > max ? s.slice(0, max) : s
+}
+
+async function searchItunes(term: string, useArtistAttribute: boolean): Promise<ItunesTrack[]> {
   const params = new URLSearchParams({
-    term:    searchTerm,
+    term,
     media:   'music',
     entity:  'song',
-    genreId: String(genreId),
-    limit:   String(limit),
+    limit:   '200',
     country: 'US',
     lang:    'en_us',
   })
+  if (useArtistAttribute) params.set('attribute', 'artistTerm')
   const res  = await fetch(`https://itunes.apple.com/search?${params}`)
   const data = await res.json()
-  return data.results ?? []
+  return (data.results ?? []).filter((r: ItunesTrack) => r.wrapperType === 'track' && r.kind === 'song')
+}
+
+async function fetchArtistSongs(artistName: string): Promise<ItunesTrack[]> {
+  // Try with artistTerm attribute first for precision
+  let results = await searchItunes(artistName, true)
+
+  // Fall back to general search filtered by artist name (catches iTunes quirks)
+  if (results.length === 0) {
+    const fallback = await searchItunes(artistName, false)
+    const lower    = artistName.toLowerCase()
+    results = fallback.filter(t => t.artistName?.toLowerCase().includes(lower))
+  }
+
+  return results
 }
 
 async function populate() {
-  // Clear existing songs for a clean re-population
   console.log('Clearing existing songs...')
   const { error: clearError } = await supabase
     .from('songs')
@@ -80,72 +168,82 @@ async function populate() {
     .not('id', 'is', null)
 
   if (clearError) {
-    console.error('Failed to clear songs:', clearError.message)
+    console.error('Failed to clear:', clearError.message)
     process.exit(1)
   }
-  console.log('Cleared.')
+  console.log('Cleared.\n')
 
-  for (const genre of GENRES) {
-    for (const decade of DECADES) {
-      console.log(`\nFetching ${genre.label} / ${decade.label}...`)
+  // Track inserted IDs globally to avoid cross-artist duplicates
+  const insertedTrackIds = new Set<number>()
 
-      const seen      = new Set<number>()
-      const allTracks: ItunesTrack[] = []
+  for (const artist of ARTISTS) {
+    process.stdout.write(`Fetching ${artist.name}...`)
 
-      for (const term of genre.searchTerms) {
-        const tracks = await fetchItunesTracks(term, genre.itunesGenreId)
+    const tracks = await fetchArtistSongs(artist.name)
 
-        for (const track of tracks) {
-          if (seen.has(track.trackId))                                   continue
-          if (!track.previewUrl)                                         continue
-          if (!track.releaseDate)                                        continue
-          if ((track.trackTimeMillis ?? 0) < MIN_DURATION_MS)           continue
-          if (!isLatinScript(track.trackName))                           continue
-          if (!isLatinScript(track.artistName))                         continue
-          if (!isRealSong(track.trackName))                              continue
+    // Group valid tracks by decade
+    const byDecade: Record<string, typeof tracks> = {}
 
-          const year = new Date(track.releaseDate).getFullYear()
-          if (year < decade.start || year > decade.end)                  continue
+    for (const track of tracks) {
+      if (insertedTrackIds.has(track.trackId))              continue
+      if (!track.previewUrl)                                continue
+      if ((track.trackTimeMillis ?? 0) < MIN_DURATION_MS)  continue
+      if (!isLatinScript(track.trackName))                  continue
+      if (!isLatinScript(track.artistName))                 continue
+      if (!isRealSong(track.trackName))                     continue
+      if (!track.releaseDate)                               continue
 
-          seen.add(track.trackId)
-          allTracks.push(track)
-        }
+      const year   = new Date(track.releaseDate).getFullYear()
+      const decade = decadeFor(year)
+      if (!decade) continue
 
-        await new Promise(r => setTimeout(r, 300))
-      }
+      if (!byDecade[decade]) byDecade[decade] = []
+      byDecade[decade].push(track)
+    }
 
-      console.log(`  ${allTracks.length} qualifying songs found`)
+    const totalQualifying = Object.values(byDecade).reduce((s, a) => s + a.length, 0)
+    console.log(` ${totalQualifying} songs across ${Object.keys(byDecade).length} decades`)
 
-      const rows = allTracks.slice(0, TARGET_PER_COMBO).map(t => ({
+    for (const [decade, decadeTracks] of Object.entries(byDecade)) {
+      const rows = decadeTracks.map(t => ({
         spotify_id:   String(t.trackId),
-        title:        t.trackName,
-        artist:       t.artistName,
-        album:        t.collectionName,
+        title:        trunc(t.trackName),
+        artist:       trunc(t.artistName),
+        album:        trunc(t.collectionName),
         album_art:    t.artworkUrl100.replace('100x100', '600x600'),
-        preview_url:  t.previewUrl,
-        genre:        genre.label,
-        decade:       decade.label,
+        preview_url:  t.previewUrl!,
+        genre:        artist.genre,
+        decade,
         release_year: new Date(t.releaseDate).getFullYear(),
         popularity:   null,
       }))
-
-      if (rows.length === 0) {
-        console.log(`  No songs found, skipping.`)
-        continue
-      }
 
       const { error } = await supabase
         .from('songs')
         .upsert(rows, { onConflict: 'spotify_id' })
 
       if (error) {
-        console.error(`  Error inserting ${genre.label}/${decade.label}:`, error.message)
+        console.error(`  Error inserting ${artist.name} / ${decade}:`, error.message)
       } else {
-        console.log(`  Inserted ${rows.length} songs`)
+        rows.forEach(r => insertedTrackIds.add(Number(r.spotify_id)))
       }
     }
+
+    // Respect iTunes rate limits
+    await new Promise(r => setTimeout(r, 400))
   }
 
+  console.log('\n─── Summary ───────────────────────────────')
+  for (const genre of ['rap', 'pop', 'rnb']) {
+    for (const decade of DECADES) {
+      const { count } = await supabase
+        .from('songs')
+        .select('*', { count: 'exact', head: true })
+        .eq('genre', genre)
+        .eq('decade', decade.label)
+      console.log(`  ${genre} / ${decade.label}: ${count ?? 0}`)
+    }
+  }
   console.log('\nDone.')
 }
 
