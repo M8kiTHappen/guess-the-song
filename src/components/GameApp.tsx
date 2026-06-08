@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { GameProvider, useGame } from '@/context/GameContext'
+import { AudioProvider } from '@/context/AudioContext'
 import SetupScreen  from '@/components/SetupScreen'
 import GameScreen   from '@/components/GameScreen'
 import RevealScreen from '@/components/RevealScreen'
@@ -31,7 +32,9 @@ function ScreenRouter() {
 export default function GameApp() {
   return (
     <GameProvider>
-      <ScreenRouter />
+      <AudioProvider>
+        <ScreenRouter />
+      </AudioProvider>
     </GameProvider>
   )
 }

@@ -1,46 +1,20 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGame } from '@/context/GameContext'
+import { useAudio } from '@/context/AudioContext'
 
 export default function GameScreen() {
   const { state, reveal, isLoading } = useGame()
+  const { isPlaying, hasPlayed, playClip } = useAudio()
   const { players, songs, currentSongIndex, isTiebreaker, songCount, genre, decade } = state
 
-  const audioRef  = useRef<HTMLAudioElement>(null)
-  const timerRef  = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const [isPlaying,       setIsPlaying]       = useState(false)
-  const [hasPlayed,       setHasPlayed]       = useState(false)
-  const [confirmReveal,   setConfirmReveal]   = useState(false)
-
+  const [confirmReveal, setConfirmReveal] = useState(false)
   const currentSong = songs[currentSongIndex]
 
-  // Reset state when song changes
-  useEffect(() => {
-    setIsPlaying(false)
-    setHasPlayed(false)
-    setConfirmReveal(false)
-    clearTimeout(timerRef.current)
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-    }
-  }, [currentSongIndex])
-
-  const play = useCallback(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    clearTimeout(timerRef.current)
-    audio.currentTime = 0
-    audio.play()
-    setIsPlaying(true)
-    setHasPlayed(true)
-    timerRef.current = setTimeout(() => {
-      audio.pause()
-      setIsPlaying(false)
-    }, 5000)
-  }, [])
+  // Reset confirm state when song changes
+  useEffect(() => { setConfirmReveal(false) }, [currentSongIndex])
 
   const totalDisplayed = isTiebreaker
     ? `Tiebreaker #${currentSongIndex - songCount + 1}`
@@ -75,15 +49,13 @@ export default function GameScreen() {
           animate={{ scale: 1, opacity: 1 }}
           className="bg-zinc-900 border border-zinc-800 rounded-3xl p-12 flex flex-col items-center gap-8 w-full max-w-lg"
         >
-          {/* Waveform / playing indicator */}
+          {/* Waveform indicator */}
           <div className="flex items-end gap-1 h-16">
             {Array.from({ length: 20 }).map((_, i) => (
               <motion.div
                 key={i}
                 className={`w-2 rounded-full ${isPlaying ? 'bg-purple-500' : 'bg-zinc-700'}`}
-                animate={isPlaying ? {
-                  height: [8, Math.random() * 48 + 16, 8],
-                } : { height: 8 }}
+                animate={isPlaying ? { height: [8, Math.random() * 48 + 16, 8] } : { height: 8 }}
                 transition={isPlaying ? {
                   duration: 0.4 + Math.random() * 0.4,
                   repeat: Infinity,
@@ -97,10 +69,9 @@ export default function GameScreen() {
             {isPlaying ? 'Listen carefully...' : hasPlayed ? 'Replay anytime' : 'Ready to play'}
           </p>
 
-          {/* Play / Replay button */}
           <motion.button
             whileTap={{ scale: 0.93 }}
-            onClick={play}
+            onClick={playClip}
             disabled={isPlaying}
             className={`w-40 h-40 rounded-full text-4xl font-black transition-all shadow-2xl ${
               isPlaying
@@ -110,8 +81,6 @@ export default function GameScreen() {
           >
             {hasPlayed ? 'REPLAY' : 'PLAY'}
           </motion.button>
-
-          <audio ref={audioRef} src={currentSong.previewUrl} preload="auto" />
         </motion.div>
 
         {/* Scoreboard */}
