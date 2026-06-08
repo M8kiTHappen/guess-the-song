@@ -9,11 +9,8 @@ export default function RevealScreen() {
   const { players, songs, currentSongIndex, awardedThisRound, isTiebreaker, tiebreakerPlayerIds } = state
 
   const [visible, setVisible] = useState(false)
-
-  // Freeze the song at mount — prevents flashing the next song during the exit animation
   const [currentSong] = useState(() => songs[currentSongIndex])
 
-  // Brief blackout then reveal
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 350)
     return () => clearTimeout(t)
@@ -24,16 +21,17 @@ export default function RevealScreen() {
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score)
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-8 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute inset-0 bg-gradient-radial from-purple-950/30 via-transparent to-transparent pointer-events-none" />
+    <div className="min-h-screen bg-[#1c1c1e] flex flex-col items-center justify-center p-8 relative overflow-hidden">
+      {/* Background glows */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#fc3c44]/10 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#fc3c44]/5 blur-[140px] pointer-events-none" />
 
       <AnimatePresence>
         {visible && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="w-full max-w-4xl flex flex-col items-center gap-8"
+            className="relative w-full max-w-4xl flex flex-col items-center gap-8"
           >
             {isTiebreaker && (
               <motion.div
@@ -41,7 +39,7 @@ export default function RevealScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-yellow-400 text-2xl font-black uppercase tracking-widest"
               >
-                Tiebreaker
+                ⚡ Tiebreaker
               </motion.div>
             )}
 
@@ -56,15 +54,15 @@ export default function RevealScreen() {
                 <img
                   src={currentSong.albumArt}
                   alt={currentSong.album}
-                  className="w-64 h-64 rounded-2xl shadow-2xl shadow-purple-900/50 object-cover"
+                  className="w-64 h-64 rounded-2xl object-cover shadow-2xl"
                 />
               ) : (
-                <div className="w-64 h-64 rounded-2xl bg-zinc-800 flex items-center justify-center shadow-2xl">
-                  <span className="text-6xl">♪</span>
+                <div className="w-64 h-64 rounded-2xl bg-[#2c2c2e] flex items-center justify-center shadow-2xl">
+                  <span className="text-6xl text-[#636366]">♪</span>
                 </div>
               )}
-              {/* Glow ring */}
-              <div className="absolute inset-0 rounded-2xl ring-4 ring-purple-500/30" />
+              {/* Red glow ring */}
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#fc3c44]/40 to-transparent blur-md -z-10" />
             </motion.div>
 
             {/* Song info */}
@@ -81,7 +79,7 @@ export default function RevealScreen() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                className="text-2xl text-zinc-400 font-medium"
+                className="text-2xl text-[#8e8e93] font-medium"
               >
                 {currentSong.artist}
                 {currentSong.releaseYear ? ` · ${currentSong.releaseYear}` : ''}
@@ -95,12 +93,12 @@ export default function RevealScreen() {
               transition={{ delay: 0.35 }}
               className="w-full"
             >
-              <p className="text-center text-zinc-500 text-lg mb-4 font-medium">
+              <p className="text-center text-[#636366] text-lg mb-4 font-medium">
                 Tap everyone who got it right
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {sortedPlayers.map(player => {
-                  const awarded   = awardedThisRound.includes(player.id)
+                  const awarded    = awardedThisRound.includes(player.id)
                   const isTbPlayer = isTiebreaker && tiebreakerPlayerIds.includes(player.id)
                   return (
                     <button
@@ -111,7 +109,7 @@ export default function RevealScreen() {
                           ? 'bg-green-700 border-green-500 text-white scale-105 shadow-lg shadow-green-900/40'
                           : isTbPlayer
                             ? 'bg-yellow-900/30 border-yellow-600 text-yellow-200 hover:bg-yellow-900/50'
-                            : 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:border-zinc-500'
+                            : 'bg-[#2c2c2e] border-[#48484a] text-[#f2f2f7] hover:border-[#fc3c44]/50'
                       }`}
                     >
                       <span className="text-3xl font-black">{player.score}{awarded ? '+1' : ''}</span>
@@ -133,7 +131,7 @@ export default function RevealScreen() {
               whileTap={{ scale: 0.97 }}
               onClick={nextSong}
               disabled={isLoading}
-              className="px-16 py-5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-2xl font-black hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-16 py-5 rounded-2xl bg-gradient-to-r from-[#fc3c44] to-[#ff6b6b] text-white text-2xl font-black hover:from-[#e8353d] hover:to-[#ff5555] transition-all shadow-xl shadow-red-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Loading...' : 'NEXT SONG'}
             </motion.button>
